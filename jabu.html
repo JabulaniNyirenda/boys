@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Interactive To-Do List</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 500px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        #todo-form, #filter-section {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        #todo-input {
+            flex-grow: 1;
+            padding: 10px;
+            margin-right: 10px;
+        }
+        #priority-select {
+            margin-right: 10px;
+            padding: 10px;
+        }
+        #todo-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .todo-item {
+            background-color: white;
+            padding: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .todo-item.completed {
+            text-decoration: line-through;
+            color: #888;
+        }
+        .todo-item.low-priority { border-left: 4px solid green; }
+        .todo-item.medium-priority { border-left: 4px solid orange; }
+        .todo-item.high-priority { border-left: 4px solid red; }
+        .delete-btn {
+            background-color: #ff4d4d;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>My To-Do List</h1>
+    <form id="todo-form">
+        <input type="text" id="todo-input" placeholder="Enter a new task" required>
+        <select id="priority-select">
+            <option value="low">Low Priority</option>
+            <option value="medium">Medium Priority</option>
+            <option value="high">High Priority</option>
+        </select>
+        <button type="submit">Add Task</button>
+    </form>
+    <div id="filter-section">
+        <select id="filter-select">
+            <option value="all">All Tasks</option>
+            <option value="active">Active Tasks</option>
+            <option value="completed">Completed Tasks</option>
+            <option value="low">Low Priority</option>
+            <option value="medium">Medium Priority</option>
+            <option value="high">High Priority</option>
+        </select>
+    </div>
+    <ul id="todo-list"></ul>
+
+    <script>
+        const todoForm = document.getElementById('todo-form');
+        const todoInput = document.getElementById('todo-input');
+        const prioritySelect = document.getElementById('priority-select');
+        const filterSelect = document.getElementById('filter-select');
+        const todoList = document.getElementById('todo-list');
+
+        // Load tasks from localStorage
+        let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+
+        function saveTasks() {
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        }
+
+        function renderTasks(filter = 'all') {
+            todoList.innerHTML = '';
+            const filteredTasks = tasks.filter(task => {
+                switch(filter) {
+                    case 'active': return !task.completed;
+                    case 'completed': return task.completed;
+                    case 'low':
+                    case 'medium':
+                    case 'high': return task.priority === filter;
+                    default: return true;
+                }
+            });
+
+            filteredTasks.sort((a, b) => {
+                const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1 };
+                return priorityOrder[b.priority] - priorityOrder[a.priority];
+            });
+
+            filteredTasks.forEach((task, index) => {
+                const taskIndex = tasks.indexOf(task);
+                const li = document.createElement('li');
+                li.classList.add('todo-item', `${task.priority}-priority`);
+                if (task.completed) li.classList.add('completed');
+                
+                li.innerHTML = `
+                    <span>${task.text}</span>
+                    <button class="delete-btn">Delete</button>
+                `;
+
+                // Toggle completed status
+                li.querySelector('span').addEventListener('click', () => {
+                    tasks[taskIndex].completed = !tasks[taskIndex].completed;
+                    saveTasks();
+                    renderTasks(filterSelect.value);
+                });
+
+                // Delete task
+                li.querySelector('.delete-btn').addEventListener('click', () => {
+                    tasks.splice(taskIndex, 1);
+                    saveTasks();
+                    renderTasks(filterSelect.value);
+                });
+
+                todoList.appendChild(li);
+            });
+        }
+
+        // Add new task
+        todoForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const newTask = {
+                text: todoInput.value,
+                completed: false,
+                priority: prioritySelect.value
+            };
+            tasks.push(newTask);
+            saveTasks();
+            todoInput.value = '';
+            renderTasks(filterSelect.value);
+        });
+
+        // Filter tasks
+        filterSelect.addEventListener('change', (e) => {
+            renderTasks(e.target.value);
+        });
+
+        // Initial render
+        renderTasks();
+    </script>
+</body>
+</html>
